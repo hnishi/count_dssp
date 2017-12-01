@@ -1,0 +1,194 @@
+#!/bin/perl
+
+### Ver 4.0
+
+use strict;
+use warnings;
+
+
+#*** SETTING ***
+#my $filename = 'dssp_info_Final.txt';
+my $filename = $ARGV[0];
+
+
+#*** CODE ***
+
+## 20 amino acid residues
+my @aa = ('A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'); 
+## 7 secondary structures + none
+my @ss = ('H','B','E','G','I','T','S',' ');
+
+
+## array of accumulated DSSP characters
+my @acc_aa;
+my @acc_aa_double;
+my @acc_aa_triple;
+my @acc_aa_quadruple;
+
+# v4.0 2017/11/30
+my $nhelix_KKEE=0; my $nf_KKEE=0; #normalization factor of KKEE
+my $nhelix_EEKK=0; my $nf_EEKK=0;
+
+open(my $fh, '<:encoding(UTF-8)', $filename)
+  or die "ERROR: Could not open file '$filename' $!";
+ 
+my $counter_pdb=0;
+my $counter_all=0;
+while (my $row = <$fh>) 
+{
+  $counter_pdb++;
+  $row = <$fh>; # discard a line
+  chomp $row;
+  $counter_all+=length $row;
+  #print "$counter_all \n";
+  my @chars_aa = split("",$row);
+  $row = <$fh>; # discard a line
+  $row = <$fh>;
+  chomp $row;
+  my @chars_ss = split("",$row);
+  #print "length: ", scalar @chars_aa, " ", scalar @chars_ss, "\n";
+  if(scalar @chars_aa != scalar @chars_ss)
+  {
+    die "ERROR: The lengths of amino acid sequence and DSSP characters did not match at data $counter_pdb \n $!";
+  }
+  my $ii = 0;
+  foreach my $i (@chars_aa)
+  {
+    my $jj = 0;
+    my $flag1 = 0;
+    foreach my $j (@aa)
+    {
+      if($ii>3 and $chars_aa[$ii] eq "K" and $chars_aa[$ii] eq $chars_aa[$ii-1] and 
+         $chars_aa[$ii-2] eq "E" and $chars_aa[$ii-2] eq $chars_aa[$ii-3] )
+      {
+        $nf_EEKK++;
+        #print " $chars_aa[$ii] ,  $chars_aa[$ii-1] , $chars_aa[$ii-2] , $chars_aa[$ii-3] ,
+        #        $chars_ss[$ii] , $chars_ss[$ii-1] , $chars_ss[$ii-2] , $chars_ss[$ii-3] \n";
+        if($chars_ss[$ii] eq "H" and $chars_ss[$ii] eq $chars_ss[$ii-1] and 
+           $chars_ss[$ii] eq $chars_ss[$ii-2] and $chars_ss[$ii] eq $chars_ss[$ii-3])
+        {
+          $nhelix_EEKK++;
+        }
+      }
+      if($i eq $j)
+      {
+        push @{$acc_aa[$jj]},$chars_ss[$ii];
+	$flag1 = 1;
+        #print " $chars_aa[$ii] ,  $chars_aa[$ii-1] , $chars_ss[$ii] , $chars_ss[$ii-1] \n" if ($chars_aa[$ii] eq $chars_aa[$ii-1] and $chars_ss[$ii] eq $chars_ss[$ii-1]) ;
+        #push @{$acc_aa_triple[$jj]},$chars_ss[$ii]  if ($chars_aa[$ii] eq $chars_aa[$ii-1] and $chars_ss[$ii] eq $chars_ss[$ii-1]) ;
+
+        if($ii>0 and $chars_aa[$ii] eq $chars_aa[$ii-1] and $chars_ss[$ii] eq $chars_ss[$ii-1])
+	{
+          push @{$acc_aa_double[$jj]},$chars_ss[$ii] ;
+
+	  if($ii>1 && $chars_aa[$ii] eq $chars_aa[$ii-2] && $chars_ss[$ii] eq $chars_ss[$ii-2])
+	  {
+            push @{$acc_aa_triple[$jj]},$chars_ss[$ii] ;
+	    if($ii>2 and $chars_aa[$ii] eq $chars_aa[$ii-3] and $chars_ss[$ii] eq $chars_ss[$ii-3])
+	    {
+              push @{$acc_aa_quadruple[$jj]},$chars_ss[$ii] ;
+	    }
+	  }
+	}
+	last;
+      }
+      $jj++;
+    }
+    if($flag1 == 0) #treat for unknown amino acid
+    {
+      push @aa, $i; 
+      #print @aa,"\n";
+      push @{$acc_aa[scalar @aa -1]},$chars_ss[$ii];
+    }
+    #print("char_aa $i, char_ss $chars_ss[$ii] \n");
+    $ii++;
+  }
+}
+
+=pod
+my $i = 0;
+foreach my $row (@acc_aa) 
+{
+  foreach my $element (@$row) 
+  {
+    print $element;
+  }
+  $i++;
+  print "\n", scalar @$row;
+  print "\n",$i,"\n";
+}
+=cut
+
+
+### COUNTING DSSP OF EVERY AMINO ACID   AND
+### CALCULATING RATIO OF EVERY DSSP   AND 
+### OUTPUT SECTION
+my $all_dssp = 0;
+for my $i (0..scalar @aa -1)
+{
+  my %counter_dssp;
+  #$counter_dssp{$_} ++ for @{$acc_aa[$i]};
+  %counter_dssp=map{ $_ => 0 } @ss;
+  for (@{$acc_aa[$i]})
+  {
+    $all_dssp++;
+    my $jj = 0;
+    my $flag1 = 0;
+    foreach my $j (@ss)
+    {
+      if($_ eq $j)
+      {
+        $counter_dssp{$j} ++; 
+	$flag1 = 1;
+	last;
+      }
+      $jj++;
+    }
+    if($flag1 == 0)
+    {
+        push @ss, $_; 
+	print "WARNING: Unknown DSSP was detected...",$_,"\n";
+        $counter_dssp{$_}++;       
+    }
+  }
+  my %counter_double;
+  $counter_double{$_} ++ for @{$acc_aa_double[$i]};
+  my %counter_triple;
+  $counter_triple{$_} ++ for @{$acc_aa_triple[$i]};
+  my %counter_quadruple;
+  $counter_quadruple{$_} ++ for @{$acc_aa_quadruple[$i]};
+
+  #print scalar @{$acc_aa[$i]}, "\n";
+  my $checker=0;
+  #for my $j (sort keys %counter_dssp)
+=pod
+  foreach my $j (@ss)
+  {
+    my $ratio = $counter_dssp{$j}/scalar @{$acc_aa[$i]};
+    if($j eq ' ')
+    {
+      print "$aa[$i] U $counter_dssp{$j} $ratio\n";    
+    }
+    else
+    {
+      print "$aa[$i] $j $counter_dssp{$j} $ratio\n";    
+    }
+    $checker+=$ratio;
+  }
+  #print "ratio: ",$checker, "\n";
+  #print "$_   $counter_dssp{$_}   \n" for sort  keys %counter_dssp;    
+  print "$aa[$i]$aa[$i] $_ $counter_double{$_}\n" for sort  keys %counter_double; #Ver 3    
+  print "$aa[$i]$aa[$i]$aa[$i] $_ $counter_triple{$_}\n" for sort  keys %counter_triple; #Ver 3    
+  print "$aa[$i]$aa[$i]$aa[$i]$aa[$i] $_ $counter_quadruple{$_}\n" for sort  keys %counter_quadruple; #Ver 3    
+=cut
+}
+
+
+print "The number of molecule data: $counter_pdb \n";
+print "The number of amino acid species: ", scalar @aa, "\n";
+print "The number of DSSP species: ", scalar @ss, "\n";
+#print $_,"@ \n" for @ss;
+#print "counter_all = $counter_all , all_dssp = $all_dssp \n";
+
+my $ratio = $nhelix_EEKK/$nf_EEKK ;
+print "EEKK: Nhelix = $nhelix_EEKK, Ntotal = $nf_EEKK, Ratio = $ratio \n";

@@ -1,0 +1,73 @@
+#!/bin/perl
+
+### Ver 4.1
+
+use strict;
+use warnings;
+
+#*** SETTING ***
+#my $filename = 'dssp_info_Final.txt';
+my $filename = $ARGV[0];
+
+
+#*** CODE ***
+
+## 20 amino acid residues
+#my @aa = ('A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'); 
+## 7 secondary structures + none
+#my @ss = ('H','B','E','G','I','T','S',' ');
+
+# v4.0 2017/11/30
+my $nhelix_KKEE=0; my $nf_KKEE=0; #normalization factor of KKEE
+my $nhelix_EEKK=0; my $nf_EEKK=0;
+
+open(my $fh, '<:encoding(UTF-8)', $filename)
+  or die "ERROR: Could not open file '$filename' $!";
+ 
+my $counter_pdb=0;
+my $counter_all=0;
+while (my $row = <$fh>) 
+{
+  $counter_pdb++;
+  $row = <$fh>; # discard a line
+  chomp $row;
+  $counter_all+=length $row;
+  #print "$counter_all \n";
+  my @chars_aa = split("",$row);
+  $row = <$fh>; # discard a line
+  $row = <$fh>;
+  chomp $row;
+  my @chars_ss = split("",$row);
+  #print "length: ", scalar @chars_aa, " ", scalar @chars_ss, "\n";
+  if(scalar @chars_aa != scalar @chars_ss)
+  {
+    die "ERROR: The lengths of amino acid sequence and DSSP characters did not match at data $counter_pdb \n $!";
+  }
+  my $ii = 0;
+  foreach my $i (@chars_aa)
+  {
+    my $jj = 0;
+    my $flag1 = 0;
+    if($ii>3 and $chars_aa[$ii] eq "K" and $chars_aa[$ii] eq $chars_aa[$ii-1] and 
+       $chars_aa[$ii-2] eq "E" and $chars_aa[$ii-2] eq $chars_aa[$ii-3] )
+    {
+      $nf_EEKK++;
+      #print " $chars_aa[$ii] ,  $chars_aa[$ii-1] , $chars_aa[$ii-2] , $chars_aa[$ii-3] ,
+      #        $chars_ss[$ii] , $chars_ss[$ii-1] , $chars_ss[$ii-2] , $chars_ss[$ii-3] \n";
+      if($chars_ss[$ii] eq "H" and $chars_ss[$ii] eq $chars_ss[$ii-1] and 
+         $chars_ss[$ii] eq $chars_ss[$ii-2] and $chars_ss[$ii] eq $chars_ss[$ii-3])
+      {
+        $nhelix_EEKK++;
+      }
+    }
+    $ii++;
+  }
+}
+
+
+### OUTPUT SECTION
+
+print "The number of molecule data: $counter_pdb \n";
+
+my $ratio = $nhelix_EEKK/$nf_EEKK ;
+print "EEKK: Nhelix = $nhelix_EEKK, Ntotal = $nf_EEKK, Ratio = $ratio \n";

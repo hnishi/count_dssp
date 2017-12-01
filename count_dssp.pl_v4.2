@@ -1,0 +1,110 @@
+#!/bin/perl
+
+### Ver 4.2
+
+use strict;
+use warnings;
+
+#*** SETTING ***
+#my $filename = 'dssp_info_Final.txt';
+my $filename = $ARGV[0];
+my $input = <STDIN>;
+chomp $input;
+my @target = split("",$input);
+print "Target sequence: $input\n";
+print "Length: ", scalar @target, "\n" ;
+
+my $ss = <STDIN>;
+chomp $ss;
+print "Secondary structure: $ss\n";
+
+#*** CODE ***
+
+## 20 amino acid residues
+#my @aa = ('A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'); 
+## 7 secondary structures + none
+#my @ss = ('H','B','E','G','I','T','S',' ');
+
+# v4.0 2017/11/30
+my $nhelix=0; my $nf=0; #normalization factor of KKEE
+
+open(my $fh, '<:encoding(UTF-8)', $filename)
+  or die "ERROR: Could not open file '$filename' $!";
+ 
+my $counter_pdb=0;
+my $counter_all=0;
+while (my $row = <$fh>) 
+{
+  $counter_pdb++;
+  $row = <$fh>; # discard a line
+  chomp $row;
+  $counter_all+=length $row;
+  #print "$counter_all \n";
+  my @chars_aa = split("",$row);
+  $row = <$fh>; # discard a line
+  $row = <$fh>;
+  chomp $row;
+  my @chars_ss = split("",$row);
+  #print "length: ", scalar @chars_aa, " ", scalar @chars_ss, "\n";
+  if(scalar @chars_aa != scalar @chars_ss)
+  {
+    die "ERROR: The lengths of amino acid sequence and DSSP characters did not match at data $counter_pdb \n $!";
+  }
+  my $ii = 0;
+  foreach my $i (@chars_aa)
+  {
+    my $jj = 0;
+    my $flag1 = 0;
+    my $flag2 = 0;
+    my $flag3 = 0;
+
+    if($ii >= scalar @target -1)
+    {
+      my $jjj = 0;
+      foreach my $j (@target)
+      {
+        $flag2 = 0;
+        $flag3 = 0;
+        if($chars_aa[$ii+1+$jjj-scalar @target] ne $target[$jjj])
+        {
+          last; 
+        }
+        $flag2 = 1;  
+        #print "$j, $chars_aa[$ii+1+$jjj-scalar @target] \n";
+        #print "$ss, $chars_ss[$ii+1+$jjj-scalar @target] \n";
+        if($chars_ss[$ii+1+$jjj-scalar @target] eq $ss)
+        {
+          $flag3 = 1;
+        }
+        $jjj++;
+      }
+      $nf++ if($flag2 == 1);
+      $nhelix++ if($flag3 == 1)
+    }
+=pod
+    if($ii>3 and $chars_aa[$ii] eq "K" and $chars_aa[$ii] eq $chars_aa[$ii-1] and 
+       $chars_aa[$ii-2] eq "K" and $chars_aa[$ii-2] eq $chars_aa[$ii-3] )
+    {
+      $nf++;
+      #print " $chars_aa[$ii] ,  $chars_aa[$ii-1] , $chars_aa[$ii-2] , $chars_aa[$ii-3] ,
+      #        $chars_ss[$ii] , $chars_ss[$ii-1] , $chars_ss[$ii-2] , $chars_ss[$ii-3] \n";
+      if($chars_ss[$ii] eq "H" and $chars_ss[$ii] eq $chars_ss[$ii-1] and 
+         $chars_ss[$ii] eq $chars_ss[$ii-2] and $chars_ss[$ii] eq $chars_ss[$ii-3])
+      {
+        $nhelix++;
+      }
+    }
+=cut
+    $ii++;
+  }
+}
+
+
+### OUTPUT SECTION
+
+print "The number of chains in database: $counter_pdb \n";
+
+my $ratio = $nhelix/$nf ;
+print "\n" ;
+print "Target sequence: $input\n";
+print "Nhelix = $nhelix, Ntotal = $nf, Ratio = $ratio \n";

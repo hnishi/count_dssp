@@ -1,6 +1,6 @@
 #!/bin/perl
 
-### Ver 4.3
+### Ver 4.5
 # Multiple input
 
 use strict;
@@ -23,6 +23,19 @@ while (<STDIN>) {
   last if ($_ eq '');
   push(@ss1, $_);
 }
+
+if(scalar @ss1 ne scalar @seq1)
+{
+  die "ERROR: Lines of input should be even number $!";
+}
+
+      foreach my $j (@seq1)
+      {
+        if($j =~ m/\[/)
+        {
+          print "I found [ \n";
+        }
+      }
 
 #printf "Your input data\n";
 for my $i (0..scalar(@ss1) -1) {
@@ -108,17 +121,17 @@ while (my $row = <$fh>)
           $flag3 = 0;
           #print "DEBUG: ",$ii+1+$jjj-scalar @target ," ", $target[$jjj], "\n";
           #print "$chars_aa[1+$jjj] \n";
-          if($chars_aa[$ii+1+$jjj-scalar @target] ne $j)
+          if($chars_aa[$ii+1+$jjj-scalar @target] eq $j or $j eq ".")
           {
-            last; 
+            $flag2 = 1;  
+            if($chars_ss[$ii+1+$jjj-scalar @target] eq $ss)
+            {
+              $flag3 = 1;
+            }
           }
-          $flag2 = 1;  
+          else {last;}
           #print "$j, $chars_aa[$ii+1+$jjj-scalar @target] \n";
           #print "$ss, $chars_ss[$ii+1+$jjj-scalar @target] \n";
-          if($chars_ss[$ii+1+$jjj-scalar @target] eq $ss)
-          {
-            $flag3 = 1;
-          }
           $jjj++;
         }
         $nf{$iii}++ if($flag2 == 1);

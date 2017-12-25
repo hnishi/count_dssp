@@ -9,11 +9,15 @@
 #perl count_dssp.pl ss_tr.txt < in_do2.txt  #> out_do2.txt  
 
 ### VERSION 4.3 or later
+
+### VERSION 5.0 or later
 perl count_dssp.pl ss_tr_cut5000.txt << _EOF #> out_do2_1.txt 
-E.KK
-H
+4
+..KK
+....
+4
 EE[KR]K
-H
+HHHH
 _EOF
 
 # you must put a line after _EOF
